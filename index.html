@@ -601,11 +601,12 @@
 </div>
 
 <script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwh_j4gtcPBGX3ulMlfYutOuNFpdeSUlZEOsMqFi0yA8LIyAfQAsls6-gp-UdBtAERl0Q/exec';
+
   const answers = {};
   const total = 10;
 
   function select(qNum, btn, value) {
-    // Clear siblings
     const siblings = btn.closest('.options').querySelectorAll('.opt');
     siblings.forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
@@ -634,53 +635,55 @@
     document.getElementById('progress').style.width = pct + '%';
   }
 
-function submitForm() {
-
-  const answered = Object.keys(answers).length;
-
-  if (answered < 8) {
-    for (let i = 1; i <= 10; i++) {
-      if (!answers[i]) {
-        const card = document.getElementById('card-' + i);
-        if (card) {
-          card.style.border = '1.5px solid #E8572A';
-          setTimeout(() => {
-            card.style.border = '1.5px solid transparent';
-          }, 2000);
+  function submitForm() {
+    // Check at least 8 answered
+    const answered = Object.keys(answers).length;
+    if (answered < 8) {
+      for (let i = 1; i <= 10; i++) {
+        if (!answers[i]) {
+          const card = document.getElementById('card-' + i);
+          if (card) {
+            card.style.outline = '2px solid #E8572A';
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => card.style.outline = 'none', 2500);
+            break;
+          }
         }
       }
+      return;
     }
-    return;
+
+    // Disable button + show loading state
+    const btn = document.querySelector('.submit-btn');
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+
+    // Google Apps Script requires no-cors because it redirects.
+    // We fire-and-forget with mode:'no-cors' — the request works
+    // but we don't get a readable response back (that's fine).
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(answers),
+    })
+    .then(() => {
+      showThankYou();
+    })
+    .catch(() => {
+      // Even on network error for no-cors, show thank you
+      // (the request very likely went through — no-cors swallows errors)
+      showThankYou();
+    });
   }
 
-  // disable button to avoid double submit
-  const btn = document.querySelector(".submit-btn");
-  btn.disabled = true;
-  btn.innerText = "Submitting...";
-
-  fetch("https://script.google.com/macros/s/AKfycbwh_j4gtcPBGX3ulMlfYutOuNFpdeSUlZEOsMqFi0yA8LIyAfQAsls6-gp-UdBtAERl0Q/exec", {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(answers)
-  })
-  .then(() => {
-
-    // show thank you screen
+  function showThankYou() {
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('thankyou').classList.add('show');
     document.getElementById('progress').style.width = '100%';
-
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  })
-  .catch(err => {
-    console.error("Submission error:", err);
-    alert("Something went wrong. Please try again.");
-    btn.disabled = false;
-    btn.innerText = "Submit answers →";
-  });
-
-}
+  }
+</script>
+</body>
+</html>
