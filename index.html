@@ -768,14 +768,27 @@
 
   // ── THE ONE AND ONLY POST — called once, at the very end ──────────────
   function sendToSheet(betaChoice, email) {
-    const payload = Object.assign({}, answers, { beta: betaChoice, email: email });
+    // Explicit string keys so AppScript reads them reliably
+    const payload = {
+      q1:    answers[1]  || '',
+      q2:    answers[2]  || '',
+      q3:    answers[3]  || '',
+      q4:    answers[4]  || '',
+      q5:    answers[5]  || '',
+      q6:    answers[6]  || '',
+      q7:    answers[7]  || '',
+      q8:    answers[8]  || '',
+      q9:    answers[9]  || '',
+      q10:   answers[10] || '',
+      beta:  betaChoice,
+      email: email,
+    };
     fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     }).catch(() => {});
-    // no-cors: fire and forget — response is unreadable but request goes through
   }
 
   // ── Final thank you ────────────────────────────────────────────────────
