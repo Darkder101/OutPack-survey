@@ -702,7 +702,7 @@
     document.getElementById('progress').style.width = pct + '%';
   }
 
-  // ── STEP 1: Submit main survey, then show beta screen ──────────────────
+  // ── STEP 1: Validate answers, then show beta screen (NO POST yet) ────────
   function submitForm() {
     const answered = Object.keys(answers).length;
     if (answered < 8) {
@@ -719,27 +719,7 @@
       }
       return;
     }
-
-    const btn = document.getElementById('mainSubmitBtn');
-    btn.textContent = 'Sending...';
-    btn.disabled = true;
-    btn.style.opacity = '0.7';
-
-    // Send survey answers (beta_tester = 'No', email = '' for now)
-    const payload = Object.assign({}, answers, { beta: 'No', email: '' });
-
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload),
-    })
-    .then(() => showBetaScreen())
-    .catch(() => showBetaScreen());
-  }
-
-  // ── Show beta tester screen ────────────────────────────────────────────
-  function showBetaScreen() {
+    // No POST here — just move to beta screen
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('betaWrap').style.display = 'block';
     document.getElementById('progress').style.width = '95%';
@@ -756,9 +736,8 @@
       document.getElementById('emailSection').style.display = 'block';
       setTimeout(() => document.getElementById('emailInput').focus(), 100);
     } else {
-      document.getElementById('emailSection').style.display = 'none';
-      // They said no — update the row with beta=No and show thank you
-      updateBetaInSheet('No', '');
+      // Said no — fire the single POST now with beta=No
+      sendToSheet('No', '');
       showThankYou(false);
     }
   }
@@ -776,18 +755,19 @@
       return;
     }
 
-    // Send a second POST to update with beta=Yes and email
-    updateBetaInSheet('Yes', email);
+    // Fire the single POST with beta=Yes and email
+    sendToSheet('Yes', email);
     showThankYou(true);
   }
 
-  // ── Skip beta — just show thank you ───────────────────────────────────
+  // ── Skip beta — fire POST with beta=Skipped, then thank you ───────────
   function skipBeta() {
+    sendToSheet('Skipped', '');
     showThankYou(false);
   }
 
-  // ── Send beta update to sheet ──────────────────────────────────────────
-  function updateBetaInSheet(betaChoice, email) {
+  // ── THE ONE AND ONLY POST — called once, at the very end ──────────────
+  function sendToSheet(betaChoice, email) {
     const payload = Object.assign({}, answers, { beta: betaChoice, email: email });
     fetch(SCRIPT_URL, {
       method: 'POST',
@@ -795,7 +775,7 @@
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     }).catch(() => {});
-    // fire and forget — no-cors, we don't read the response
+    // no-cors: fire and forget — response is unreadable but request goes through
   }
 
   // ── Final thank you ────────────────────────────────────────────────────
