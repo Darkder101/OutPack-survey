@@ -579,7 +579,7 @@
   <div class="submit-area">
     <h3>That's it.<br/><em>Thank you.</em></h3>
     <p>Your honest answers are going directly into shaping something real. This isn't a school project — it might actually get built.</p>
-    <button class="submit-btn" onclick="submitForm()">Submit answers →</button>
+    <button class="submit-btn" id="mainSubmitBtn" onclick="submitForm()">Submit answers →</button>
     <div style="margin-top:14px; font-family:'DM Mono', monospace; font-size:10px; color:var(--muted); letter-spacing:0.1em;">
       ANONYMOUS · NO ACCOUNT NEEDED · TAKES 0 COURAGE
     </div>
@@ -587,11 +587,78 @@
 
 </div>
 
-<!-- THANK YOU -->
+<!-- ── BETA TESTER SCREEN ───────────────────────────────────────────────── -->
+<div class="wrap" id="betaWrap" style="display:none;">
+  <div style="text-align:center; margin-bottom:32px;">
+    <div style="font-size:44px; margin-bottom:16px;">🚀</div>
+    <div style="font-family:'DM Serif Display', serif; font-size:36px; color:var(--ink); line-height:1;">
+      One more<br/><em style="color:var(--terra)">thing.</em>
+    </div>
+    <div style="font-family:'Caveat', cursive; font-size:17px; color:var(--muted); margin-top:10px; line-height:1.5;">
+      Would you want to be part of what happens next?
+    </div>
+  </div>
+
+  <!-- Beta card -->
+  <div class="q-card" style="border-left: 3px solid var(--terra);">
+    <div class="q-num">BONUS</div>
+    <div class="q-text">Are you open to being a beta tester, joining future surveys, or early experiments with Outpack?</div>
+    <div class="q-why">No spam. No commitment. Just first access if this becomes real.</div>
+    <div class="options" style="margin-bottom:0;">
+      <button class="opt" id="betaYes" onclick="chooseBeta('yes')">Yes — I'm in. Drop me a line when it's ready.</button>
+      <button class="opt" id="betaNo"  onclick="chooseBeta('no')">No thanks — just wanted to help with the survey.</button>
+    </div>
+  </div>
+
+  <!-- Email field — hidden until yes -->
+  <div id="emailSection" style="display:none; margin-top:14px;">
+    <div class="q-card" id="emailCard" style="border-left: 3px solid var(--sage);">
+      <div class="q-num">YOUR EMAIL</div>
+      <div class="q-text">Drop your email below.</div>
+      <div class="q-why">Only used to reach you about Outpack. Nothing else, ever.</div>
+      <input
+        type="email"
+        id="emailInput"
+        placeholder="you@example.com"
+        style="
+          width:100%; padding:12px 14px;
+          background:var(--board); border:1.5px solid var(--faint);
+          border-radius:6px; font-family:'DM Sans', sans-serif;
+          font-size:14px; color:var(--ink); outline:none;
+          transition:border-color 0.15s; margin-bottom:0;
+        "
+        onfocus="this.style.borderColor='var(--terra)'"
+        onblur="this.style.borderColor='var(--faint)'"
+      />
+      <div style="margin-top:10px; font-family:'DM Mono', monospace; font-size:9px; color:var(--muted); letter-spacing:0.1em;">
+        🔒 NOT SHARED · NOT SOLD · JUST OUTPACK
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:4px;">
+      <button class="submit-btn" onclick="submitBeta()" style="max-width:280px;">
+        Count me in →
+      </button>
+    </div>
+  </div>
+
+  <!-- Skip beta entirely -->
+  <div id="betaSkipBtn" style="text-align:center; margin-top:20px;">
+    <button onclick="skipBeta()" style="
+      background:none; border:none; cursor:pointer;
+      font-family:'DM Mono', monospace; font-size:11px;
+      color:var(--muted); letter-spacing:0.08em;
+      text-decoration:underline; text-decoration-style:dotted;
+      padding:8px;
+    ">Skip — just submit my answers</button>
+  </div>
+</div>
+
+<!-- ── THANK YOU ────────────────────────────────────────────────────────── -->
 <div class="wrap thankyou" id="thankyou">
-  <div style="font-size:48px; margin-bottom:20px">🙌</div>
-  <h2>Genuinely<br/><em>helpful.</em></h2>
-  <p style="margin-top:16px;">
+  <div style="font-size:48px; margin-bottom:20px" id="tyEmoji">🙌</div>
+  <h2 id="tyHeading">Genuinely<br/><em>helpful.</em></h2>
+  <p style="margin-top:16px;" id="tyBody">
     Your answers just made this idea 10x more honest.<br/><br/>
     If this turns into something real, you'll hear about it first.
   </p>
@@ -635,8 +702,8 @@
     document.getElementById('progress').style.width = pct + '%';
   }
 
+  // ── STEP 1: Submit main survey, then show beta screen ──────────────────
   function submitForm() {
-    // Check at least 8 answered
     const answered = Object.keys(answers).length;
     if (answered < 8) {
       for (let i = 1; i <= 10; i++) {
@@ -653,35 +720,101 @@
       return;
     }
 
-    // Disable button + show loading state
-    const btn = document.querySelector('.submit-btn');
+    const btn = document.getElementById('mainSubmitBtn');
     btn.textContent = 'Sending...';
     btn.disabled = true;
     btn.style.opacity = '0.7';
 
-    // Google Apps Script requires no-cors because it redirects.
-    // We fire-and-forget with mode:'no-cors' — the request works
-    // but we don't get a readable response back (that's fine).
+    // Send survey answers (beta_tester = 'No', email = '' for now)
+    const payload = Object.assign({}, answers, { beta: 'No', email: '' });
+
     fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(answers),
+      body: JSON.stringify(payload),
     })
-    .then(() => {
-      showThankYou();
-    })
-    .catch(() => {
-      // Even on network error for no-cors, show thank you
-      // (the request very likely went through — no-cors swallows errors)
-      showThankYou();
-    });
+    .then(() => showBetaScreen())
+    .catch(() => showBetaScreen());
   }
 
-  function showThankYou() {
+  // ── Show beta tester screen ────────────────────────────────────────────
+  function showBetaScreen() {
     document.getElementById('formWrap').style.display = 'none';
-    document.getElementById('thankyou').classList.add('show');
+    document.getElementById('betaWrap').style.display = 'block';
+    document.getElementById('progress').style.width = '95%';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Beta yes/no toggle ─────────────────────────────────────────────────
+  function chooseBeta(choice) {
+    document.getElementById('betaYes').classList.toggle('selected', choice === 'yes');
+    document.getElementById('betaNo').classList.toggle('selected',  choice === 'no');
+    document.getElementById('betaSkipBtn').style.display = 'none';
+
+    if (choice === 'yes') {
+      document.getElementById('emailSection').style.display = 'block';
+      setTimeout(() => document.getElementById('emailInput').focus(), 100);
+    } else {
+      document.getElementById('emailSection').style.display = 'none';
+      // They said no — update the row with beta=No and show thank you
+      updateBetaInSheet('No', '');
+      showThankYou(false);
+    }
+  }
+
+  // ── Submit beta with email ─────────────────────────────────────────────
+  function submitBeta() {
+    const email = document.getElementById('emailInput').value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      const input = document.getElementById('emailInput');
+      input.style.borderColor = '#E8572A';
+      input.focus();
+      setTimeout(() => input.style.borderColor = 'var(--faint)', 2000);
+      return;
+    }
+
+    // Send a second POST to update with beta=Yes and email
+    updateBetaInSheet('Yes', email);
+    showThankYou(true);
+  }
+
+  // ── Skip beta — just show thank you ───────────────────────────────────
+  function skipBeta() {
+    showThankYou(false);
+  }
+
+  // ── Send beta update to sheet ──────────────────────────────────────────
+  function updateBetaInSheet(betaChoice, email) {
+    const payload = Object.assign({}, answers, { beta: betaChoice, email: email });
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+    // fire and forget — no-cors, we don't read the response
+  }
+
+  // ── Final thank you ────────────────────────────────────────────────────
+  function showThankYou(isBeta) {
+    document.getElementById('betaWrap').style.display = 'none';
+    const ty = document.getElementById('thankyou');
+    ty.classList.add('show');
     document.getElementById('progress').style.width = '100%';
+
+    if (isBeta) {
+      document.getElementById('tyEmoji').textContent   = '🎉';
+      document.getElementById('tyHeading').innerHTML   = "You're on<br/><em>the list.</em>";
+      document.getElementById('tyBody').innerHTML      = "You'll be among the first to hear when Outpack is ready to test.<br/><br/>Sit tight — real things take a little time.";
+    } else {
+      document.getElementById('tyEmoji').textContent   = '🙌';
+      document.getElementById('tyHeading').innerHTML   = "Genuinely<br/><em>helpful.</em>";
+      document.getElementById('tyBody').innerHTML      = "Your answers just made this idea 10x more honest.<br/><br/>If this turns into something real, you'll hear about it first.";
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 </script>
