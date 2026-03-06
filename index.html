@@ -652,7 +652,13 @@
     }
 
     // Log to console (replace with your backend/Google Sheet webhook)
-    console.log('OUTPACK SURVEY RESPONSES:', JSON.stringify(answers, null, 2));
+    fetch("YOUR_SCRIPT_URL", {https://script.google.com/macros/s/AKfycbwh_j4gtcPBGX3ulMlfYutOuNFpdeSUlZEOsMqFi0yA8LIyAfQAsls6-gp-UdBtAERl0Q/exec
+  method: "POST",
+  body: JSON.stringify(answers),
+  headers: {
+    "Content-Type": "application/json"
+  }
+});
 
     // Show thank you
     document.getElementById('formWrap').style.display = 'none';
